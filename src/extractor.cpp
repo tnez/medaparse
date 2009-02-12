@@ -45,56 +45,39 @@
  *
  *
  *
- * ---------------------HEADER--------------------------
+ * -----------------IMPLEMENTATION----------------------
  *
  */
 
-#ifndef EXTRACTOR_H
-#define EXTRACTOR_H
+#include "extractor.hpp"
 
-#include <regex>
-#include <fstream>
-#include <iostream>
-
-class MedPCDataParser {
-private:
-  std::ifstream datafile;
-  std::ofstream writefile;
-  char * box;
-  char * subject;
-  char * experiment;
-  char * group;
-  char * msn;
-  char * start;
-  char * end;
-  char * variable;
-  int bin;
-  char * timestamp;
-public:
-  // this constructor will handle opening the medpc data file
-  // as well as the write file and ready them for read / write
-  MedPCDataParser(const char * ,  // full path of input data file
-                  const char * ,  // full path to output file
-                  bool append     // mode: write = 0 | append = 1
-                  );
-  // Destructor:
-  // * save write file
-  // * close data and write files
-  // * delete all pointers
-  ~MedPCDataParser();
-  // functions to read from datafile
-  char * ReadBox(); 
-  char * ReadSubject();
-  char * ReadExperiment();
-  char * ReadGroup();
-  char * ReadMSN(); 
-  char * ReadStart();
-  char * ReadEnd(); 
-  char * ReadData();
-  // check if new bin
-  bool IsNewBin();
-  // save write file
-  bool SaveWriteFile();
+MedPCDataParser::MedPCDataParser ( infile,
+                                   outfile,
+                                   append );
+{
+  // instantiate infile
+  datafile std::ifstream(infile);
+  // temporary testing variable
+  char * tmp;
+  // loop through file
+  while (datafile->good()) {
+    // grab line of txt from file
+    // and store in C-string
+    datafile->getline(tmp,1024);
+    // output string
+    std::cout << tmp << '\n';
+  }
 }
 
-#endif /* EXTRACTOR_H */
+MedPCDataParser::~MedPCDataParser ();
+char * MedPCDataParser::ReadBox ();       { }
+char * MedPCDataParser::ReadSubject();    { }
+char * MedPCDataParser::ReadExperiment(); { }
+char * MedPCDataParser::ReadGroup();      { }
+char * MedPCDataParser::ReadMSN();        { }
+char * MedPCDataParser::ReadStart();      { }
+char * MedPCDataParser::ReadEnd();        { }
+char * MedPCDataParser::ReadData();       { }
+bool MedPCDataParser::IsNewBin();         { }
+bool MedPCDataParser::SaveWriteFile();    { }
+
