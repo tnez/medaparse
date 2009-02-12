@@ -49,6 +49,8 @@
  *
  */
 
+#ifndef EXTRACTOR_H
+#define EXTRACTOR_H
 
 #include <regex>
 #include <fstream>
@@ -95,3 +97,4 @@ public:
   bool SaveWriteFile();
 }
 
+#endif /* EXTRACTOR_H */
