@@ -56,5 +56,23 @@
 #   all nessasary data to be evaluated independantly of all other data )
 # - User is notified of success
 
-
-
+# TEST:
+# supply (in)datafile
+$in_data = "../in_data";
+# :END
+# Open (in)datafile
+open IN_FILE, $in_data or die $!;
+# read (in)datafile
+# TODO:
+# switch read method so that this
+# can be read continuously rather
+# than in chunks . . . chunks may
+# create a problem with regex
+# parsing by stranding data
+# outside of its variable context
+# :END
+read (IN_FILE, $read_data, 1024) or die $!;
+# TEST:
+# output read file
+print $read_data or die $!;
+# :END
