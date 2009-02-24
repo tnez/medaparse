@@ -56,6 +56,11 @@
 #   all nessasary data to be evaluated independantly of all other data )
 # - User is notified of success
 
+# data file name
+# TODO:
+# this should be supplied as arg
+# :END
+my $in_data = "../in_data";
 
 # Open (in)datafile
 open IN_FILE, $in_data or die $!;
@@ -68,6 +73,29 @@ open IN_FILE, $in_data or die $!;
 # parsing by stranding data
 # outside of its variable context
 # :END
-read (IN_FILE, $read_data, 1024) or die $!;
+my $read_data;                  # holds data file data
+my $block;                      # holds temp chunks
+my @variables = ();             # array to hold variables
+my $index = 0;             # index counter to use with array
+# extract variables
+# using regex
+while (<IN_FILE>) {
+  # reads file line by line
+  # into read data
+  # for each pattern that matches
+  # pattern for variable labels...
+  foreach $match ($_ =~ m/(^|\s+)([\D]*?):[^\\]/g) {
+    # ...store in variable array
+    $variables[$index++] = $match;
+  }
+}
+
+# test print
+print "\n";
+# loop through variables array
+# and print
+for ($i=0;$i<=$index;$i++) {
+  print "$variables[$i] \n";
+}
 
 
