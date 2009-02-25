@@ -76,7 +76,8 @@ open IN_FILE, $in_data or die $!;
 my $read_data;                  # holds data file data
 my $block;                      # holds temp chunks
 my @variables = ();             # array to hold variables
-my $index = 0;             # index counter to use with array
+my $index = 0;                  # index counter to use with array
+
 # extract variables
 # using regex
 while (<IN_FILE>) {
@@ -84,9 +85,12 @@ while (<IN_FILE>) {
   # into read data
   # for each pattern that matches
   # pattern for variable labels...
-  foreach $match ($_ =~ m/(^|\s+)([\D]*?):[^\\]/g) {
-    # ...store in variable array
-    $variables[$index++] = $match;
+  foreach $match ($_ =~ m/(^|\s+)(\D+?):[^\\]/g) {
+    # check that this is not whitespace
+    if ($match =~ m/[^\s]/) {
+      # ...store in variable array
+      $variables[$index++] = $match;
+    }
   }
 }
 
