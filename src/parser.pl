@@ -73,11 +73,15 @@ open IN_FILE, $in_data or die $!;
 # parsing by stranding data
 # outside of its variable context
 # :END
-my $read_data;                  # holds data file data
+my $raw;                 	# holds raw read data
 my $block;                      # holds temp chunks
 my @variables = ();             # array to hold variables
-my $index = 0;                  # index counter to use with array
-
+my $v = 0;                      # ctr used with var array
+my @context = ();               # array to hold data that will be rep
+my $c = 0;			# ctr used with context array
+my @data = ();			# reusable container to hold data
+my $d = 0;
+my $meta_data;                  # string to hold repeated meta data
 # extract variables
 # using regex
 while (<IN_FILE>) {
@@ -85,21 +89,42 @@ while (<IN_FILE>) {
   # into read data
   # for each pattern that matches
   # pattern for variable labels...
-  foreach $match ($_ =~ m/(^|\s+)(\D+?):[^\\]/g) {
+  $raw .= $_;
+  foreach my $match ($_ =~ m/(^|\s+)(\D+?):[^\\]/g) {
     # check that this is not whitespace
     if ($match =~ m/[^\s]/) {
       # ...store in variable array
-      $variables[$index++] = $match;
+      $variables[$v++] = $match;
     }
   }
 }
 
-# test print
-print "\n";
-# loop through variables array
-# and print
-for ($i=0;$i<=$index;$i++) {
-  print "$variables[$i] \n";
+# for each of the variables
+# grab the data between start
+# and end
+# start=tag end=tag+1
+my $t = -1;                     # starts at -1 because while increments first run
+while ($variables[++$t]!~       # while haven't met match condition
+       m/\b[a-zA-Z]\b/) {       # match 1 char variables
+  # setup start and end locators
+  my $start = $variables[$t];
+  my $end = $variables[$t+1];
+  # extract the data with regex
+  $raw =~ m/$start:\s*(.*?)\s*$end:/; # match between s/e ignore spaces
+  # put the match into the context array...
+  # this is special case meta data that will
+  # be repeated again and again in records
+  $context[$c++] = $1;
 }
+# turn context array data into a single string
+# so as to avoid extra loop in the write process
+foreach my $tmp (@context) {
+  # for each of these . . . append to a meta data string
+  $meta_data .= "\"$tmp\",";
+}
+
+print "\nVAR:\n@variables\n";
+print "\nCXT:\n@context\n";
+print "\n$meta_data\n";
 
 
