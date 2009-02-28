@@ -73,15 +73,19 @@ open IN_FILE, $in_data or die $!;
 # parsing by stranding data
 # outside of its variable context
 # :END
-my $raw;                 	# holds raw read data
-my $block;                      # holds temp chunks
-my @variables = ();             # array to hold variables
-my $v = 0;                      # ctr used with var array
-my @context = ();               # array to hold data that will be rep
-my $c = 0;			# ctr used with context array
-my @data = ();			# reusable container to hold data
-my $d = 0;
-my $meta_data;                  # string to hold repeated meta data
+our $raw;                 	# holds raw read data
+our $block;                     # holds temp chunks
+our @variables = ();            # array to hold variables
+our $v = 0;                     # ctr used with var array
+our @context = ();              # array to hold data that will be rep
+our $c = 0;			# ctr used with context array
+our @data = ();			# reusable container to hold data
+our $d = 0;
+our $meta_data;    # string to hold repeated meta data
+our $data_roll;    # string holds rolls of data for further processing
+
+
+
 # extract variables
 # using regex
 while (<IN_FILE>) {
@@ -99,23 +103,26 @@ while (<IN_FILE>) {
   }
 }
 
+
 # for each of the variables
 # grab the data between start
 # and end
 # start=tag end=tag+1
-my $t = -1;                     # starts at -1 because while increments first run
+our $t = -1;         # starts at -1 because while increments first run
 while ($variables[++$t]!~       # while haven't met match condition
        m/\b[a-zA-Z]\b/) {       # match 1 char variables
   # setup start and end locators
   my $start = $variables[$t];
   my $end = $variables[$t+1];
   # extract the data with regex
-  $raw =~ m/$start:\s*(.*?)\s*$end:/; # match between s/e ignore spaces
+  $raw =~ m/$start:\s*(.*?)\s*$end:/m; # match between s/e ignore spaces
   # put the match into the context array...
   # this is special case meta data that will
   # be repeated again and again in records
   $context[$c++] = $1;
 }
+
+
 # turn context array data into a single string
 # so as to avoid extra loop in the write process
 foreach my $tmp (@context) {
@@ -123,8 +130,44 @@ foreach my $tmp (@context) {
   $meta_data .= "\"$tmp\",";
 }
 
-print "\nVAR:\n@variables\n";
-print "\nCXT:\n@context\n";
-print "\n$meta_data\n";
+
+# loop through the remaining variables in
+# the variable array and write records
+# to the correct table files for each
+# of the remaining variables
+for ($t;$t<$v;$t++) {
+  # setup start and end locators
+  my $start = $variables[$t];
+  my $end = $variables[$t+1];
+  # manipulate 
+  # if this is the last variable in the
+  # variable array process until eof
+  if ($t==$v) {
+    $raw =~ m/\b$start:\s*()\s*$$/s; # match from start to <eof>
+    $data_roll = $1;                 # roll data for next step
+  }
+  # ...else this is not the last variable,
+  # so we can get between start and end tags
+  else {
+    # extract the data with regex
+    $raw =~ m/\b$start:[^\\]\s*([])\s*$end:/s; # match between s/e ignore spaces
+    $data_roll = $1;                    # roll data for next step
+  }
+  # @test
+  print "\n$start\{$data_roll\}$end";
+  # start matching individual records
+  # in the data roll
+  foreach my $record 
+    ($data_roll =~
+     m/\s*([0-9+\.+0-9+^:])(\s|$$)/g) { # match all things followed by space that don't end in ":"
+    # 
+#    print "\nt: $t\n$variables[$t]: $record;\n";
+  }
+}
+
+# print "\nVAR:\n@variables\n";
+# print "\nCXT:\n@context\n";
+# print "\n$meta_data\n";
+
 
 
