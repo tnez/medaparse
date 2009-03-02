@@ -99,6 +99,28 @@ our $data_roll;                 # string holds rolls of data for
 
 
 
+# MAIN PROCEDURE
+# ==============
+find_files() or die $!;         # returns each file in "in" directory
+                                # and sends it on to the parsing
+                                # routine
+
+
+# SUB PROCEDURE:find_files
+# in : "in" directory exists in the Parser Project Folder
+# out: each file in the "in" dir is checked for previous processing
+#      and if has not been processed, is sent to the parse_datafile
+#      subroutine
+sub find_files () {
+  opendir(DIR, "in/") or die $!; # open "in" directory
+  # for every datafile found in the directory...
+  foreach my $file (readdir(DIR)) {
+    parse_datafile($file);      # send file to the parsing sub routine
+  }
+  closedir(DIR);                # close "in" directory
+}
+
+
 # SUB PROCEDURE:parse_datafile
 # in : filename of a valid MedPC datafile and applicable user
 #      edits to the user editable variables (bin related)
