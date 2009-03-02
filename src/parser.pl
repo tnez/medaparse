@@ -60,10 +60,8 @@
 # TODO:
 # this should be supplied as arg
 # :END
-my $in_data = "../in_data";
 
-# Open (in)datafile
-open IN_FILE, $in_data or die $!;
+
 # read (in)datafile
 # TODO:
 # switch read method so that this
@@ -73,6 +71,8 @@ open IN_FILE, $in_data or die $!;
 # parsing by stranding data
 # outside of its variable context
 # :END
+our $in_data = "../in/in_data";	# holds name of current read file
+our $out_file;			# holds name of current write file
 our $raw;                 	# holds raw read data
 our $block;                     # holds temp chunks
 our @variables = ();            # array to hold variables
@@ -85,6 +85,8 @@ our $meta_data;    # string to hold repeated meta data
 our $data_roll;    # string holds rolls of data for further processing
 
 
+# Open (in)datafile
+open IN_FILE, $in_data or die $!;
 
 # extract variables
 # using regex
@@ -103,6 +105,8 @@ while (<IN_FILE>) {
   }
 }
 
+# Close (in)datafile
+close IN_FILE;
 
 # for each of the variables
 # grab the data between start
@@ -115,11 +119,11 @@ while ($variables[++$t]!~       # while haven't met match condition
   my $start = $variables[$t];
   my $end = $variables[$t+1];
   # extract the data with regex
-  $raw =~ m/$start:\s*(.*?)\s*$end:/m; # match between s/e ignore spaces
-  # put the match into the context array...
-  # this is special case meta data that will
-  # be repeated again and again in records
-  $context[$c++] = $1;
+  $raw =~ m/$start:\s*(.*?)\s*$end:/m; # match between s/e ignore spaces 
+    # put the match into the context array...
+    # this is special case meta data that will
+    # be repeated again and again in records
+    $context[$c++] = $1;
 }
 
 
@@ -142,27 +146,43 @@ for ($t;$t<$v;$t++) {
   # manipulate 
   # if this is the last variable in the
   # variable array process until eof
-  if ($t==$v) {
-    $raw =~ m/\b$start:\s*()\s*$$/s; # match from start to <eof>
-    $data_roll = $1;                 # roll data for next step
+  if ($t==$v-1) {
+    $raw =~ m/\b$start:\s*([^\\].*?)\s*$/s; # match from start to <eof>	
+      $data_roll = $1;			    # roll data for next step
   }
   # ...else this is not the last variable,
   # so we can get between start and end tags
   else {
     # extract the data with regex
-    $raw =~ m/\b$start:[^\\]\s*([])\s*$end:/s; # match between s/e ignore spaces
-    $data_roll = $1;                    # roll data for next step
+    $raw =~ m/\b$start:\s*([^\\].*?)\s*$end:/s; # match between s/e ignore spaces 
+      $data_roll = $1;		# roll data for next step
   }
-  # @test
-  print "\n$start\{$data_roll\}$end";
+  # open out file for writing
+  open OUT_FILE, ">>../out/$variables[$t].csv" or die $!;
+
   # start matching individual records
   # in the data roll
-  foreach my $record 
-    ($data_roll =~
-     m/\s*([0-9+\.+0-9+^:])(\s|$$)/g) { # match all things followed by space that don't end in ":"
-    # 
-#    print "\nt: $t\n$variables[$t]: $record;\n";
+
+  # if data roll contains no spaces
+  # it is a single datum point and needs
+  # no special for loop for processing
+  if ($data_roll!~m/\s/) {
+    # output data
+    print OUT_FILE "\n$meta_data\"$data_roll\";";
   }
+  # else, multiple data points exist for this
+  # variable, so we need a foreach loop to process
+  else {
+    foreach my $record 
+      (split(" ",$data_roll)) { # match all things followed by space that don't end in ":"
+      # 
+      print OUT_FILE "\n$meta_data\"$record\";"
+	if $record !~ m/[:]/; # if doesn't contain : or a space
+    }
+  }
+  # close the current write file
+  # for which we have completed writing
+  close OUT_FILE;
 }
 
 # print "\nVAR:\n@variables\n";
