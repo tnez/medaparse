@@ -85,14 +85,13 @@ our @bin_vars = ("D","E","F");
 # define variables
 our $in_data = "../in/$ARGV[0]"; # holds name of current read file
 our $out_file;                   # holds name of current write file
+our $log = "filelog.log";        # logfile where records prev input
 our $raw;                        # holds raw read data
 our $block;                      # holds temp chunks
 our @variables = ();             # array to hold variables
 our $v = 0;                      # ctr used with var array
 our @context = ();               # array to hold data that will be rep
 our $c = 0;                      # ctr used with context array
-our @data = ();                  # reusable container to hold data
-our $d = 0;
 our $meta_data;    # string to hold repeated meta data
 our $data_roll;    # string holds rolls of data for further processing
 
@@ -223,5 +222,14 @@ for ($t;$t<$v;$t++) {
   # for which we have completed writing
   close OUT_FILE;
 }
+
+# here I am assuming a successful write has taken place
+# TODO: create error checks and log errors, make sure
+# that the (in)file has really been parsed successfully :END
+
+# open logfile for write
+open OUT_FILE, ">>$log" or die $!;
+$meta_data =~ m/^"(.*?)"/s;     # extract MedPC datafile name from meta data string
+print OUT_FILE "$1\n";        # and put value into our filename logfile
 
 
