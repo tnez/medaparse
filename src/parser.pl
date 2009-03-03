@@ -84,18 +84,22 @@ our @bin_vars = ("D","E","F");
 # ##############################################################################
 
 # define variables
+our @files = ();                # holds collective list of input files
 our $in_data;                   # holds name of current read file
 our $out_file;                  # holds name of current write file
-our $log = "filelog.log";       # logfile where records prev input
-our $raw;                       # holds raw read data
-our $block;                     # holds temp chunks
-our @variables = ();            # array to hold variables
-our $v = 0;                     # ctr used with var array
-our @context = ();              # array to hold data that will be rep
-our $c = 0;                     # ctr used with context array
-our $meta_data;                 # string to hold repeated meta data
-our $data_roll;                 # string holds rolls of data for
-                                # further processing
+our $log = "../out/filelog.log"; # logfile where records prev input
+our $raw;                        # holds raw read data
+our $block;                      # holds temp chunks
+our @variables = ();             # array to hold variables
+our $v = 0;                      # ctr used with var array
+our @context = ();               # array to hold data that will be rep
+our $c = 0;                      # ctr used with context array
+our $meta_data;                  # string to hold repeated meta data
+our $data_roll;                  # string holds rolls of data for
+                                 # further processing
+
+# SUB ROUTINES
+# ======================
 
 
 
@@ -105,6 +109,10 @@ find_files() or die $!;         # returns each file in "in" directory
                                 # and sends it on to the parsing
                                 # routine
 
+parse_datafiles();              # parse all of the datafiles who's
+                                # filenames have been put into the
+                                # file array
+
 
 # SUB PROCEDURE:find_files
 # in : "in" directory exists in the Parser Project Folder
@@ -112,10 +120,19 @@ find_files() or die $!;         # returns each file in "in" directory
 #      and if has not been processed, is sent to the parse_datafile
 #      subroutine
 sub find_files () {
-  opendir(DIR, "in/") or die $!; # open "in" directory
-  # for every datafile found in the directory...
-  foreach my $file (readdir(DIR)) {
-    parse_datafile($file);      # send file to the parsing sub routine
+  print "\n";                       # cleans up term screen a little
+  opendir(DIR, "../in/") or die $!; # open "in" directory
+  # add each file name into the array
+  my $i = 0;                   # local counter to increment file array
+  # while there are files to be read...
+  while (my $file = readdir(DIR)) {
+    # skip if file begins with "."
+    next if $file =~ m/^\./;
+    # made it past skip... so file
+    # does not start with "." and
+    # I can add the filename to
+    # the files array
+    $files[$i++] = $file;
   }
   closedir(DIR);                # close "in" directory
 }
@@ -126,137 +143,162 @@ sub find_files () {
 #      edits to the user editable variables (bin related)
 # out: input file is parsed into csv record format, adding
 #      bins when applicable
-sub parse_datafile () {
-  # put arg filename into variable
-  $in_data = $_;
-  # Open (in)datafile
-  open IN_FILE, $in_data or die $!;
-
-  # extract variables
-  # using regex
-  while (<IN_FILE>) {
-    # reads file line by line
-    # into read data
-    # for each pattern that matches
-    # pattern for variable labels...
-    $raw .= $_;
-    foreach my $match ($_ =~ m/(^|\s+)(\D+?):[^\\]/g) {
-      # check that this is not whitespace
-      if ($match =~ m/[^\s]/) {
-        # ...store in variable array
-        $variables[$v++] = $match;
+sub parse_datafiles {
+  # for each of the files in the files array
+  # start the parsing process
+  foreach $in_data (@files) {
+    # reset variables for begin loop
+    initialize_vars();
+    # Open (in)datafile
+    open IN_FILE, "../in/$in_data" or die $!;
+    # extract variables
+    # using regex
+    while (<IN_FILE>) {
+      # reads file line by line
+      # into read data
+      # for each pattern that matches
+      # pattern for variable labels...
+      $raw .= $_;
+      foreach my $match ($_ =~ m/(^|\s+)(\D+?):[^\\]/g) {
+        # check that this is not whitespace
+        if ($match =~ m/[^\s]/) {
+          # ...store in variable array
+          $variables[$v++] = $match;
+        }
       }
     }
-  }
 
-  # Close (in)datafile
-  close IN_FILE;
+    # Close (in)datafile
+    close IN_FILE;
 
-  # for each of the variables
-  # grab the data between start
-  # and end
-  # start=tag end=tag+1
-  our $t = -1;                  # starts at -1 because while
-                                # increments first run
-  while ($variables[++$t]!~     # while haven't met match condition
-         m/\b[a-zA-Z]\b/) {     # match 1 char variables
-    # setup start and end locators
-    my $start = $variables[$t];
-    my $end = $variables[$t+1];
-    # extract the data with regex
-    $raw =~ m/$start:\s*(.*?)\s*$end:/m; # match between s/e ignore spaces
-      # put the match into the context array...
-      # this is special case meta data that will
-      # be repeated again and again in records
-      $context[$c++] = $1;
-  }
-
-
-  # turn context array data into a single string
-  # so as to avoid extra loop in the write process
-  foreach my $tmp (@context) {
-    # for each of these . . . append to a meta data string
-    $meta_data .= "\"$tmp\",";
-  }
-
-
-  # loop through the remaining variables in
-  # the variable array and write records
-  # to the correct table files for each
-  # of the remaining variables
-  for ($t;$t<$v;$t++) {
-    # setup start and end locators
-    my $start = $variables[$t];
-    my $end = $variables[$t+1];
-    # manipulate
-    # if this is the last variable in the
-    # variable array process until eof
-    if ($t==$v-1) {
-      $raw =~ m/\b$start:\s*([^\\].*?)\s*$/s; # match from start to <eof>
-        $data_roll = $1;        # roll data for next step
-    }
-    # ...else this is not the last variable,
-    # so we can get between start and end tags
-    else {
+    # for each of the variables
+    # grab the data between start
+    # and end
+    # start=tag end=tag+1
+    our $t = -1;                # starts at -1 because while
+    # increments first run
+    while ($variables[++$t]!~   # while haven't met match condition
+           m/\b[a-zA-Z]\b/) {   # match 1 char variables
+      # setup start and end locators
+      my $start = $variables[$t];
+      my $end = $variables[$t+1];
       # extract the data with regex
-      $raw =~ m/\b$start:\s*([^\\].*?)\s*$end:/s; # match between s/e ignore spaces
-        $data_roll = $1;        # roll data for next step
+      $raw =~ m/$start:\s*(.*?)\s*$end:/m; # match between s/e ignore spaces
+        # put the match into the context array...
+        # this is special case meta data that will
+        # be repeated again and again in records
+        $context[$c++] = $1;
     }
-    # open out file for writing
-    open OUT_FILE, ">>../out/$variables[$t].csv" or die $!;
 
-    # start matching individual records
-    # in the data roll
 
-    # if data roll contains no spaces
-    # it is a single datum point and needs
-    # no special for loop for processing
-    if ($data_roll!~m/\s/) {
-      # output data
-      print OUT_FILE "\n$meta_data\"$data_roll\";";
+    # turn context array data into a single string
+    # so as to avoid extra loop in the write process
+    foreach my $tmp (@context) {
+      # for each of these . . . append to a meta data string
+      $meta_data .= "\"$tmp\",";
     }
-    # else, multiple data points exist for this
-    # variable, so we need a foreach loop to process
-    else {
-      # if this is a variable needing to be grouped
-      # in bins, using the users edits at the top
-      # of this script, use this version of for loop
-      if (grep(/$variables[$t]$/,@bin_vars)) { # true when cur var in bin var array
-        my $binCount = 0;                      # holds bin count
-        # process each datum point with
-        # special bin processing added
-        foreach my $datum
-          (split(" ",$data_roll)) { # match all things followed by space that
-          # don't end in ":"
-          # if doesn't contain : or a space,
-          # we process further
-          if ($datum !~ m/[:]/) {
-            # binCount is equal to one more than
-            # the floor of the quotient got from
-            # dividing the datum point by the
-            # user-edited $bin_value
-            $binCount = floor($datum/$bin_value) + 1;
-            # output datum with bin
-            print OUT_FILE "\n$meta_data\"$binCount\",\"$datum\";";
+
+
+    # loop through the remaining variables in
+    # the variable array and write records
+    # to the correct table files for each
+    # of the remaining variables
+    for ($t;$t<$v;$t++) {
+      # setup start and end locators
+      my $start = $variables[$t];
+      my $end = $variables[$t+1];
+      # manipulate
+      # if this is the last variable in the
+      # variable array process until eof
+      if ($t==$v-1) {
+        $raw =~ m/\b$start:\s*([^\\].*?)\s*$/s; # match from start to <eof>
+          $data_roll = $1;      # roll data for next step
+      }
+      # ...else this is not the last variable,
+      # so we can get between start and end tags
+      else {
+        # extract the data with regex
+        $raw =~ m/\b$start:\s*([^\\].*?)\s*$end:/s; # match between s/e ignore spaces
+          $data_roll = $1;      # roll data for next step
+      }
+      # open out file for writing
+      open OUT_FILE, ">>../out/$variables[$t].csv" or die $!;
+
+      # start matching individual records
+      # in the data roll
+
+      # if data roll contains no spaces
+      # it is a single datum point and needs
+      # no special for loop for processing
+      if ($data_roll!~m/\s/) {
+        # output data
+        print OUT_FILE "\n$meta_data\"$data_roll\";";
+      }
+      # else, multiple data points exist for this
+      # variable, so we need a foreach loop to process
+      else {
+        # if this is a variable needing to be grouped
+        # in bins, using the users edits at the top
+        # of this script, use this version of for loop
+        if (grep(/$variables[$t]$/,@bin_vars)) { # true when cur var in bin var array
+          my $binCount = 0;                      # holds bin count
+          # process each datum point with
+          # special bin processing added
+          foreach my $datum
+            (split(" ",$data_roll)) { # match all things followed by space that
+            # don't end in ":"
+            # if doesn't contain : or a space,
+            # we process further
+            if ($datum !~ m/[:]/) {
+              # binCount is equal to one more than
+              # the floor of the quotient got from
+              # dividing the datum point by the
+              # user-edited $bin_value
+              $binCount = floor($datum/$bin_value) + 1;
+              # output datum with bin
+              print OUT_FILE "\n$meta_data\"$binCount\",\"$datum\";";
+            }
+          }
+        }
+        # . . . else, this is not a bin var and can be
+        # processed with a simpler for loop
+        else {
+          foreach my $datum
+            (split(" ",$data_roll)) { # match all things followed by space that
+            # don't end in ":"
+            # output data
+            print OUT_FILE "\n$meta_data\"$datum\";"
+              if $datum !~ m/[:]/; # if doesn't contain : or a space
           }
         }
       }
-      # . . . else, this is not a bin var and can be
-      # processed with a simpler for loop
-      else {
-        foreach my $datum
-          (split(" ",$data_roll)) { # match all things followed by space that
-          # don't end in ":"
-          # output data
-          print OUT_FILE "\n$meta_data\"$datum\";"
-            if $datum !~ m/[:]/; # if doesn't contain : or a space
-        }
-      }
+      # close the current write file
+      # for which we have completed writing
+      close OUT_FILE;
     }
-    # close the current write file
-    # for which we have completed writing
-    close OUT_FILE;
+    $raw = "";
+    # write the filename that we have just parsed in the filelog.log
+    # TODO: this parse routine needs error checks and needs to send
+    # appropriate error messages to the log file when the (in)file was
+    # not parsed successfully :END
+    my $MedPC_filename = get_filename(); # get filename according to MedPC
+    write_to_log($MedPC_filename);       # write to logfile
+    print "finished $MedPC_filename...\n"; # update user on term screen
   }
+}
+
+# SUB PROCEDURE:initialize_vars
+# in : n/a
+# out: nesc global variables are reset and can be safely used
+sub initialize_vars {
+  $raw = "";
+  $block = "";
+  @variables = ();
+  $v = 0;
+  @context = ();
+  $c = 0;
+  $meta_data = "";
+  $data_roll = "";
 }
 
 
@@ -264,7 +306,7 @@ sub parse_datafile () {
 # in : 1) datafile has already been parsed, populating the variables array
 #      2) filename is the first variable found in the datafile
 # out: filename as reported in MedPC datafile is returned
-sub get_filename () {
+sub get_filename {
   $meta_data =~ m/^"(.*?)"/s; # extract filename from meta data string
     return $1;                # return the filename match
 }
@@ -274,8 +316,8 @@ sub get_filename () {
 # in : string to be put in log (written filename or error desc)
 # out: filename or error msg written to logfile "filelog.log"
 #      in the "src" directory
-sub write_to_log () {
-  my $input = $_;                    # grab arg as variable
+sub write_to_log {
+  my $input = @_[0];                 # store arg in input
   open OUT_FILE, ">>$log" or die $!; # open logfile for write
   print OUT_FILE "$input\n"; # and put value into our filename logfile
   close OUT_FILE;            # close logfile
