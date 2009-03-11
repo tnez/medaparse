@@ -232,7 +232,7 @@ sub parse_datafiles {
       # no special for loop for processing
       if ($data_roll!~m/\s/) {
         # output data
-        print OUT_FILE "\n$meta_data\"$data_roll\";";
+        print OUT_FILE "\n$meta_data\"$data_roll\"";
       }
       # else, multiple data points exist for this
       # variable, so we need a foreach loop to process
@@ -256,7 +256,7 @@ sub parse_datafiles {
               # user-edited $bin_value
               $binCount = floor($datum/$bin_value) + 1;
               # output datum with bin
-              print OUT_FILE "\n$meta_data\"$binCount\",\"$datum\";";
+              print OUT_FILE "\n$meta_data\"$binCount\",\"$datum\"";
             }
           }
         }
@@ -267,7 +267,7 @@ sub parse_datafiles {
             (split(" ",$data_roll)) { # match all things followed by space that
             # don't end in ":"
             # output data
-            print OUT_FILE "\n$meta_data\"$datum\";"
+            print OUT_FILE "\n$meta_data\"$datum\""
               if $datum !~ m/[:]/; # if doesn't contain : or a space
           }
         }
