@@ -57,29 +57,6 @@ use POSIX qw(floor);
 # - User is notified of success or failure
 
 
-
-# PROGRAM STARTS HERE:
-# ------------------------------------------------------------------------------
-
-# USER EDITED VARIABLES
-# you should edit these to get your desired results
-
-# increment value for bins:
-# this is dependent on way your program keeps time, so
-# enter the value that MedPC would record for your desired
-# time value, given the instructions of your program
-# example: if your program is incrementing in hundreths
-#          of a second, you must enter a $bin_value of
-#          500 to get 5 second bins
-our $bin_value = 1000;
-
-# variables for which bins are produced:
-# write in format ("A","B","C",...,"Z")
-# if no bins are needed leave empty paren: our @bin_vars = ();
-our @bin_vars = ("D","E","F");
-
-
-
 # DO NOT EDIT BELOW THIS LINE
 # ##############################################################################
 
@@ -237,32 +214,6 @@ sub parse_datafiles {
       # else, multiple data points exist for this
       # variable, so we need a foreach loop to process
       else {
-        # if this is a variable needing to be grouped
-        # in bins, using the users edits at the top
-        # of this script, use this version of for loop
-        if (grep(/$variables[$t]$/,@bin_vars)) { # true when cur var in bin var array
-          my $binCount = 0;                      # holds bin count
-          # process each datum point with
-          # special bin processing added
-          foreach my $datum
-            (split(" ",$data_roll)) { # match all things followed by space that
-            # don't end in ":"
-            # if doesn't contain : or a space,
-            # we process further
-            if ($datum !~ m/[:]/) {
-              # binCount is equal to one more than
-              # the floor of the quotient got from
-              # dividing the datum point by the
-              # user-edited $bin_value
-              $binCount = floor($datum/$bin_value) + 1;
-              # output datum with bin
-              print OUT_FILE "\n$meta_data\"$binCount\",\"$datum\"";
-            }
-          }
-        }
-        # . . . else, this is not a bin var and can be
-        # processed with a simpler for loop
-        else {
           foreach my $datum
             (split(" ",$data_roll)) { # match all things followed by space that
             # don't end in ":"
@@ -271,7 +222,6 @@ sub parse_datafiles {
               if $datum !~ m/[:]/; # if doesn't contain : or a space
           }
         }
-      }
       # close the current write file
       # for which we have completed writing
       close OUT_FILE;
