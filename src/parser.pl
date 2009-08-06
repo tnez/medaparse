@@ -222,7 +222,7 @@ sub parse_datafiles {
                 # 
                 # increment bin counter and print record if $datum
                 # does not contain ":" or " "
-                if ($datam !~ m/[:]/) {
+                if ($datum !~ m/[:]/) {
                     $bCount++;
                     print OUT_FILE "\n$meta_data\"$bCount\",\"$datum\"";
                 }
