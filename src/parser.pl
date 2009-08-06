@@ -214,12 +214,18 @@ sub parse_datafiles {
       # else, multiple data points exist for this
       # variable, so we need a foreach loop to process
       else {
+          # initialize a bin counter to include bin number in record
+          my $bCount=0;
           foreach my $datum
             (split(" ",$data_roll)) { # match all things followed by space that
-            # don't end in ":"
-            # output data
-            print OUT_FILE "\n$meta_data\"$datum\""
-              if $datum !~ m/[:]/; # if doesn't contain : or a space
+                                      # don't end in ":"
+                # 
+                # increment bin counter and print record if $datum
+                # does not contain ":" or " "
+                if ($datam !~ m/[:]/) {
+                    $bCount++;
+                    print OUT_FILE "\n$meta_data\"$bCount\",\"$datum\"";
+                }
           }
         }
       # close the current write file
